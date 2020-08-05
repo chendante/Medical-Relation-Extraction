@@ -6,20 +6,22 @@ import os
 
 
 class DataProcess(object):
-    def __init__(self, pretrained_path, raw_data_path, output_dir, max_len=300, is_test=True):
+    def __init__(self, pretrained_path, raw_data_path, output_dir, max_len=300, is_test=True, test_data_path=None):
         self.bert_tokenizer = BertTokenizer.from_pretrained(pretrained_path)
-        self.raw_data_path = raw_data_path
         self.is_test = is_test
-        self.schemas = self.schemas_init()
-        self.train_data = self.train_data_init()
         self.output_dir = output_dir
         self.max_len = max_len
+        self.schemas = self.schemas_init(raw_data_path)
+        self.train_data = self.train_data_init(raw_data_path, is_test)
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
+        if test_data_path is not None:
+            self.test_data = self.test_init(test_data_path)
 
-    def schemas_init(self):
+    @staticmethod
+    def schemas_init(raw_data_path):
         schemas = []
-        with codecs.open(self.raw_data_path + "53_schemas.json", encoding='utf-8') as f:
+        with codecs.open(raw_data_path + "53_schemas.json", encoding='utf-8') as f:
             while True:
                 line = f.readline()
                 if line == "":
@@ -28,23 +30,35 @@ class DataProcess(object):
                 schemas.append("_".join([schema['subject_type'], schema['predicate'], schema['object_type']]))
         return schemas
 
-    def train_data_init(self):
+    @staticmethod
+    def train_data_init(raw_data_path, is_test):
         train_data = []
-        with codecs.open(self.raw_data_path + "train_data.json", encoding='utf-8') as f:
+        with codecs.open(raw_data_path + "train_data.json", encoding='utf-8') as f:
             while True:
                 line = f.readline()
                 if line == "":
                     break
                 train_data.append(json.loads(line))
 
-        if not self.is_test:
-            with codecs.open(self.raw_data_path + "val_data.json", encoding='utf-8') as f:
+        if not is_test:
+            with codecs.open(raw_data_path + "val_data.json", encoding='utf-8') as f:
                 while True:
                     line = f.readline()
                     if line == "":
                         break
                     train_data.append(json.loads(line))
         return train_data
+
+    @staticmethod
+    def test_init(test_data_path):
+        test_data = []
+        with codecs.open(test_data_path, encoding='utf-8') as f:
+            while True:
+                line = f.readline()
+                if line == "":
+                    break
+                test_data.append(json.loads(line))
+        return test_data
 
     def process(self):
         pass
@@ -101,6 +115,11 @@ class BeginEndDataProcess(DataProcess):
                 print(spo)
                 break
         return input_ids, attention_masks, labels
+
+    def test_data_process(self):
+
+    def test_instance_process(self):
+
 
 
 def main():

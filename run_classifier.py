@@ -4,6 +4,7 @@ import numpy as np
 import torch
 import time
 import datetime
+import os
 
 
 def flat_accuracy(preds, labels):
@@ -31,6 +32,7 @@ def main():
         output_hidden_states=False,  # 模型是否返回所有隐层状态.
     )
     output_dir = "./model_save/"
+    if not os.path.exists(output_dir): os.makedirs(output_dir)
     input_ids = torch.from_numpy(np.load("./preparation/processed_data/input_ids.npy")).type(torch.long)
     attention_masks = torch.from_numpy(np.load("./preparation/processed_data/attention_masks.npy")).type(torch.long)
     labels = torch.from_numpy(np.load("./preparation/processed_data/labels.npy")).type(torch.long)
