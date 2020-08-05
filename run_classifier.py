@@ -30,11 +30,12 @@ def main():
         output_attentions=False,  # 模型是否返回 attentions weights.
         output_hidden_states=False,  # 模型是否返回所有隐层状态.
     )
-    input_ids = torch.tensor(torch.from_numpy(np.load("./preparation/processed_data/input_ids.npy")), dtype=torch.long)
-    attention_masks = torch.tensor(torch.from_numpy(np.load("./preparation/processed_data/attention_masks.npy")), dtype=torch.long)
-    labels = torch.tensor(torch.from_numpy(np.load("./preparation/processed_data/labels.npy")), dtype=torch.long)
+    output_dir = "./model_save/"
+    input_ids = torch.from_numpy(np.load("./preparation/processed_data/input_ids.npy")).type(torch.long)
+    attention_masks = torch.from_numpy(np.load("./preparation/processed_data/attention_masks.npy")).type(torch.long)
+    labels = torch.from_numpy(np.load("./preparation/processed_data/labels.npy")).type(torch.long)
     dataset = TensorDataset(input_ids, attention_masks, labels)
-    model.cuda()
+    # model.cuda()
 
     train_dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
 
@@ -44,7 +45,7 @@ def main():
                       )
 
     # 训练 epochs。 BERT 作者建议在 2 和 4 之间，设大了容易过拟合
-    epochs = 4
+    epochs = 1
 
     # 总的训练样本数
     total_steps = len(train_dataloader) * epochs
@@ -73,14 +74,16 @@ def main():
 
         # 将模型设置为训练模式。这里并不是调用训练接口的意思
         model.train()
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        device = torch.device('cpu')
+        # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         # 训练集小批量迭代
         for step, batch in enumerate(train_dataloader):
 
             # 每经过40次迭代，就输出进度信息
-            if step % 40 == 0 and not step == 0:
+            if step % 2 == 0 and not step == 0:
                 elapsed = format_time(time.time() - t0)
                 print('  Batch {:>5,}  of  {:>5,}.    Elapsed: {:}.'.format(step, len(train_dataloader), elapsed))
+                break
 
             # 准备输入数据，并将其拷贝到 gpu 中
             b_input_ids = batch[0].to(device)
@@ -104,7 +107,7 @@ def main():
 
             # 反向传播
             loss.backward()
-
+            print(loss)
             # 梯度裁剪，避免出现梯度爆炸情况
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
 
@@ -127,6 +130,15 @@ def main():
     print("")
     print("Training complete!")
     print("Total training took {:} (h:mm:ss)".format(format_time(time.time() - total_t0)))
+
+    model.eval()
+    with torch.no_grad():
+        outputs = model(input_ids[0:1], attention_mask=attention_masks[0:1], token_type_ids=None)
+    print(outputs)
+
+    print("Saving model to %s" % output_dir)
+    model_to_save = model.module if hasattr(model, 'module') else model
+    model_to_save.save_pretrained(output_dir)
 
 
 if __name__ == "__main__":
