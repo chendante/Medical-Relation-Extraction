@@ -3,6 +3,8 @@ from transformers import BertTokenizer
 import codecs
 import numpy as np
 import os
+import thulac
+from collections import defaultdict, Counter
 
 
 class DataProcess(object):
@@ -116,10 +118,29 @@ class BeginEndDataProcess(DataProcess):
                 break
         return input_ids, attention_masks, labels
 
-    def test_data_process(self):
+    def test_data_process(self): pass
 
-    def test_instance_process(self):
+    def test_instance_process(self): pass
 
+
+def create_dictionary(diction_path, json_path):
+    dictionary = defaultdict(Counter)
+    train_data = DataProcess("../pretrained_model/bert_wwm/", "../raw_data/", "./processed_data/", is_test=False)
+    for td in train_data.train_data:
+        sent = td['text']
+        index = sent.find("@")
+        if index != -1:
+            title = sent[0:index]
+            if "。" not in title:
+                dictionary[title]["疾病"] += 1
+        for spo in td['spo_list']:
+            dictionary[spo['object']['@value']][spo['object_type']['@value']] += 1
+            dictionary[spo['subject']][spo['subject_type']] += 1
+    with codecs.open(diction_path, 'w+', encoding='utf-8') as f:
+        for k, v in dictionary.items():
+            f.write(k + "\t" + str(sum(v.values())) + "\n")
+    with codecs.open(json_path, 'w+', encoding='utf-8') as f:
+        json.dump(dictionary, f)
 
 
 def main():
@@ -139,4 +160,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # main()
+    create_dictionary("./dictionary/sub_obj.txt", "./dictionary/sub_obj_type.json")
