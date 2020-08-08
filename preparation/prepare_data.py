@@ -76,9 +76,12 @@ class BeginEndDataProcess(DataProcess):
     object_end = "<o_e>"
     special_tokens = {'additional_special_tokens': [subject_begin, subject_end, object_begin, object_end]}
 
-    def __init__(self, pretrained_path, raw_data_path, output_dir, max_len=300, is_test=True):
-        super().__init__(pretrained_path, raw_data_path, output_dir, max_len, is_test)
+    def __init__(self, pretrained_path, raw_data_path, output_dir, max_len=300, is_test=True, test_data_path=None,
+                 split_dic=None):
+        super().__init__(pretrained_path, raw_data_path, output_dir, max_len=max_len, is_test=is_test,
+                         test_data_path=test_data_path)
         self.bert_tokenizer.add_special_tokens(self.special_tokens)
+        self.lac = thulac.thulac(split_dic)
 
     def process(self):
         input_ids = []
@@ -118,9 +121,18 @@ class BeginEndDataProcess(DataProcess):
                 break
         return input_ids, attention_masks, labels
 
-    def test_data_process(self): pass
+    def test_data_process(self):
+        for t_d in self.test_data:
+            sent = t_d['text']
+            words = self.lac.cut(sent)
+            medical_words = [w for w in words if w[1] == 'uw']
+            if len(medical_words) <= 2:
+                print(sent)
+                print(medical_words)
+                break
 
-    def test_instance_process(self): pass
+    def test_instance_process(self):
+        pass
 
 
 def create_dictionary(diction_path, json_path):
@@ -136,9 +148,12 @@ def create_dictionary(diction_path, json_path):
         for spo in td['spo_list']:
             dictionary[spo['object']['@value']][spo['object_type']['@value']] += 1
             dictionary[spo['subject']][spo['subject_type']] += 1
+    counter = Counter()
+    for k, v in dictionary.items():
+        counter[k] = sum(v.values())
     with codecs.open(diction_path, 'w+', encoding='utf-8') as f:
-        for k, v in dictionary.items():
-            f.write(k + "\t" + str(sum(v.values())) + "\n")
+        for k, v in counter.most_common():
+            f.write(k + "\t" + str(v) + "\n")
     with codecs.open(json_path, 'w+', encoding='utf-8') as f:
         json.dump(dictionary, f)
 
@@ -161,4 +176,7 @@ def main():
 
 if __name__ == "__main__":
     # main()
-    create_dictionary("./dictionary/sub_obj.txt", "./dictionary/sub_obj_type.json")
+    # create_dictionary("./dictionary/sub_obj.txt", "./dictionary/sub_obj_type.json")
+    data_processor = BeginEndDataProcess("../pretrained_model/bert_wwm/", "../raw_data/", "./processed_data/",
+                                         test_data_path="../raw_data/test1.json", split_dic="./dictionary/sub_obj.txt")
+    data_processor.test_data_process()
