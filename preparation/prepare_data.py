@@ -77,11 +77,15 @@ class BeginEndDataProcess(DataProcess):
     special_tokens = {'additional_special_tokens': [subject_begin, subject_end, object_begin, object_end]}
 
     def __init__(self, pretrained_path, raw_data_path, output_dir, max_len=300, is_test=True, test_data_path=None,
-                 split_dic=None):
+                 split_dic=None, voc_type_path=None):
         super().__init__(pretrained_path, raw_data_path, output_dir, max_len=max_len, is_test=is_test,
                          test_data_path=test_data_path)
         self.bert_tokenizer.add_special_tokens(self.special_tokens)
         self.lac = thulac.thulac(split_dic)
+        self.voc_type = None
+        if voc_type_path is not None:
+            with codecs.open(voc_type_path, encoding='utf-8') as f:
+                self.voc_type = json.load(f, encoding='utf-8')
 
     def process(self):
         input_ids = []
@@ -125,11 +129,12 @@ class BeginEndDataProcess(DataProcess):
         for t_d in self.test_data:
             sent = t_d['text']
             words = self.lac.cut(sent)
-            medical_words = [w for w in words if w[1] == 'uw']
-            if len(medical_words) <= 2:
-                print(sent)
-                print(medical_words)
-                break
+            medical_words = [w for w in words if w[0] in self.voc_type]
+            if len(medical_words) < 2:
+                # medical_words.extend([w for w in words if w[1] in ['n', 'np', 'ns', 'ni']])
+                # if len(medical_words) <= 2:
+                    print(sent)
+                    print(medical_words)
 
     def test_instance_process(self):
         pass
@@ -178,5 +183,6 @@ if __name__ == "__main__":
     # main()
     # create_dictionary("./dictionary/sub_obj.txt", "./dictionary/sub_obj_type.json")
     data_processor = BeginEndDataProcess("../pretrained_model/bert_wwm/", "../raw_data/", "./processed_data/",
-                                         test_data_path="../raw_data/test1.json", split_dic="./dictionary/sub_obj.txt")
+                                         test_data_path="../raw_data/test1.json", split_dic="./dictionary/sub_obj.txt",
+                                         voc_type_path="./dictionary/sub_obj_type.json")
     data_processor.test_data_process()
