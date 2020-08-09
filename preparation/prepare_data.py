@@ -5,6 +5,7 @@ import numpy as np
 import os
 import thulac
 from collections import defaultdict, Counter
+from sklearn import preprocessing
 
 
 class DataProcess(object):
@@ -63,10 +64,24 @@ class DataProcess(object):
         return test_data
 
     def process(self):
-        pass
+        input_ids = []
+        attention_masks = []
+        labels = []
+        for instance in self.train_data:
+            i_input_ids, i_attention_masks, i_labels = self.instance_process(instance)
+            input_ids.extend(i_input_ids)
+            attention_masks.extend(i_attention_masks)
+            labels.extend(i_labels)
+        input_ids = np.array(input_ids, dtype=np.long)
+        attention_masks = np.array(attention_masks, dtype=np.long)
+        labels = np.array(labels, dtype=np.float)
+        np.save(self.output_dir + "input_ids.npy", input_ids)
+        np.save(self.output_dir + "attention_masks.npy", attention_masks)
+        np.save(self.output_dir + "labels.npy", labels)
+        return input_ids, attention_masks, labels
 
     def instance_process(self, instance):
-        pass
+        raise Exception("Didn't implement instance_process")
 
 
 class BeginEndDataProcess(DataProcess):
@@ -86,22 +101,6 @@ class BeginEndDataProcess(DataProcess):
         if voc_type_path is not None:
             with codecs.open(voc_type_path, encoding='utf-8') as f:
                 self.voc_type = json.load(f, encoding='utf-8')
-
-    def process(self):
-        input_ids = []
-        attention_masks = []
-        labels = []
-        for instance in self.train_data:
-            i_input_ids, i_attention_masks, i_labels = self.instance_process(instance)
-            input_ids.extend(i_input_ids)
-            attention_masks.extend(i_attention_masks)
-            labels.extend(i_labels)
-        input_ids = np.array(input_ids, dtype=np.long)
-        attention_masks = np.array(attention_masks, dtype=np.long)
-        labels = np.array(labels)
-        np.save(self.output_dir + "input_ids.npy", input_ids)
-        np.save(self.output_dir + "attention_masks.npy", attention_masks)
-        np.save(self.output_dir + "labels.npy", labels)
 
     def instance_process(self, instance):
         # TODO
@@ -133,11 +132,39 @@ class BeginEndDataProcess(DataProcess):
             if len(medical_words) < 2:
                 # medical_words.extend([w for w in words if w[1] in ['n', 'np', 'ns', 'ni']])
                 # if len(medical_words) <= 2:
-                    print(sent)
-                    print(medical_words)
+                print(sent)
+                print(medical_words)
 
     def test_instance_process(self):
         pass
+
+
+class MultiLabelDataProcess(DataProcess):
+    def instance_process(self, instance):
+        # TODO
+        # if len(token_list) > self.bert_tokenizer.model_max_length: pass  # BERT有输入上限
+        input_ids = []
+        attention_masks = []
+        labels = []
+        encoded_dict = self.bert_tokenizer(instance['text'], add_special_tokens=True, max_length=self.max_len,
+                                           pad_to_max_length=True)
+        input_ids.append(encoded_dict['input_ids'])
+        attention_masks.append(encoded_dict['attention_mask'])
+
+        label = np.array(
+            [self.schemas.index('_'.join([spo['subject_type'], spo['predicate'], spo['object_type']['@value']])) for
+             spo in instance["spo_list"]])
+        one_hot = np.zeros(len(self.schemas), dtype=np.long)
+        one_hot[label.ravel()] = 1
+        labels.append(one_hot)
+
+        return input_ids, attention_masks, labels
+
+class LabelDataProcess(DataProcess):
+    def process(self):
+
+    def instance_process(self, instance):
+
 
 
 def create_dictionary(diction_path, json_path):
@@ -182,7 +209,11 @@ def main():
 if __name__ == "__main__":
     # main()
     # create_dictionary("./dictionary/sub_obj.txt", "./dictionary/sub_obj_type.json")
-    data_processor = BeginEndDataProcess("../pretrained_model/bert_wwm/", "../raw_data/", "./processed_data/",
-                                         test_data_path="../raw_data/test1.json", split_dic="./dictionary/sub_obj.txt",
-                                         voc_type_path="./dictionary/sub_obj_type.json")
-    data_processor.test_data_process()
+    # data_processor = MultiLabelDataProcess(pretrained_path="../pretrained_model/bert_wwm/",
+    #                                        raw_data_path="../raw_data/",
+    #                                        output_dir="./processed_data/")
+    # data_processor.process()
+    label = np.array([1, 1, 9])
+    one_hot = np.zeros(10, dtype=np.long)
+    one_hot[label.ravel()] = 1
+    print(one_hot)

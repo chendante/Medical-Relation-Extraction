@@ -2,3 +2,6 @@
 /pretrained_model
 /.idea
 /model_save
+*.json
+*.npy
+*.txt
