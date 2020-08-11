@@ -3,25 +3,14 @@ from torch.utils.data import TensorDataset, DataLoader
 import numpy as np
 import torch
 import time
-import datetime
 import os
+from util import format_time
 
 
 def flat_accuracy(preds, labels):
     pred_flat = np.argmax(preds, axis=1).flatten()
     labels_flat = labels.flatten()
     return np.sum(pred_flat == labels_flat) / len(labels_flat)
-
-
-def format_time(elapsed):
-    '''
-    Takes a time in seconds and returns a string hh:mm:ss
-    '''
-    # 四舍五入到最近的秒
-    elapsed_rounded = int(round((elapsed)))
-
-    # 格式化为 hh:mm:ss
-    return str(datetime.timedelta(seconds=elapsed_rounded))
 
 
 def main():
