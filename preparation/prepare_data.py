@@ -253,7 +253,7 @@ class LabelDataProcess(DataProcess):
         return label_list
 
     def convert_to_ids(self, label_list, sent_tokens, schema):
-        pad_token_id = -100  # doesn't matter
+        pad_token_id = 0  # doesn't matter
         token_type_ids = [0 for _ in sent_tokens]
 
         # add question part

@@ -22,14 +22,16 @@ if __name__ == '__main__':
     token_type_ids = torch.from_numpy(np.load(data_path + "./"))
     dataset = TensorDataset(input_ids, attention_masks, labels, token_type_ids)
     model.cuda()
-    train_dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
+
+    # 训练 epochs。 BERT 作者建议在 2 和 4 之间，设大了容易过拟合
+    epochs = 4
+    batch_size = 32
+
+    train_dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
     optimizer = AdamW(model.parameters(),
                       lr=2e-5,  # args.learning_rate - default is 5e-5
                       eps=1e-8  # args.adam_epsilon  - default is 1e-8
                       )
-
-    # 训练 epochs。 BERT 作者建议在 2 和 4 之间，设大了容易过拟合
-    epochs = 4
 
     # 总的训练样本数
     total_steps = len(train_dataloader) * epochs
