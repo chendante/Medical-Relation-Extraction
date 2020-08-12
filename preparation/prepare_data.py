@@ -253,7 +253,6 @@ class LabelDataProcess(DataProcess):
         return label_list
 
     def convert_to_ids(self, label_list, sent_tokens, schema):
-        pad_token_id = 0  # doesn't matter
         token_type_ids = [0 for _ in sent_tokens]
 
         # add question part
@@ -275,7 +274,7 @@ class LabelDataProcess(DataProcess):
         input_ids.extend([0] * (self.max_len - len(input_ids)))
         attention_masks.extend([0] * (self.max_len - len(sent_tokens)))
         token_type_ids.extend([0] * (self.max_len - len(sent_tokens)))
-        label_ids.extend([pad_token_id] * (self.max_len - len(sent_tokens)))
+        label_ids.extend([0] * (self.max_len - len(sent_tokens)))
 
         assert len(input_ids) == self.max_len
         assert len(attention_masks) == self.max_len

@@ -13,6 +13,7 @@ if __name__ == '__main__':
         output_attentions=False,  # 模型是否返回 attentions weights.
         output_hidden_states=False,  # 模型是否返回所有隐层状态.
     )
+    model.cuda()
     output_dir = "./model_save/token_label/"
     data_path = "./preparation/processed_data/token_label/"
     if not os.path.exists(output_dir): os.makedirs(output_dir)
@@ -21,7 +22,6 @@ if __name__ == '__main__':
     labels = torch.from_numpy(np.load(data_path + "labels.npy")).type(torch.float)
     token_type_ids = torch.from_numpy(np.load(data_path + "./"))
     dataset = TensorDataset(input_ids, attention_masks, labels, token_type_ids)
-    model.cuda()
 
     # 训练 epochs。 BERT 作者建议在 2 和 4 之间，设大了容易过拟合
     epochs = 4
@@ -41,6 +41,11 @@ if __name__ == '__main__':
                                                 num_warmup_steps=0,
                                                 num_training_steps=total_steps)
     total_t0 = time.time()
+
+    # 将模型设置为训练模式。这里并不是调用训练接口的意思
+    model.train()
+    device = torch.device('cuda')
+
     for epoch_i in range(0, epochs):
 
         # ========================================
@@ -57,9 +62,6 @@ if __name__ == '__main__':
         # 重置每次 epoch 的训练总 loss
         total_train_loss = 0
 
-        # 将模型设置为训练模式。这里并不是调用训练接口的意思
-        model.train()
-        device = torch.device('cuda')
         # 训练集小批量迭代
         for step, batch in enumerate(train_dataloader):
 
