@@ -19,8 +19,8 @@ if __name__ == '__main__':
     if not os.path.exists(output_dir): os.makedirs(output_dir)
     input_ids = torch.from_numpy(np.load(data_path + "input_ids.npy")).type(torch.long)
     attention_masks = torch.from_numpy(np.load(data_path + "attention_masks.npy")).type(torch.long)
-    labels = torch.from_numpy(np.load(data_path + "labels.npy")).type(torch.float)
-    token_type_ids = torch.from_numpy(np.load(data_path + "token_type_ids.npy"))
+    labels = torch.from_numpy(np.load(data_path + "labels.npy")).type(torch.long)
+    token_type_ids = torch.from_numpy(np.load(data_path + "token_type_ids.npy")).type(torch.long)
     dataset = TensorDataset(input_ids, attention_masks, labels, token_type_ids)
 
     # 训练 epochs。 BERT 作者建议在 2 和 4 之间，设大了容易过拟合
@@ -80,7 +80,7 @@ if __name__ == '__main__':
             model.zero_grad()
 
             # 前向传播
-            loss = model(b_input_ids,
+            loss, logits = model(b_input_ids,
                          token_type_ids=b_token_type_ids,
                          attention_mask=b_input_mask,
                          labels=b_labels)
