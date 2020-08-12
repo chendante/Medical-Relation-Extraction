@@ -6,17 +6,7 @@ import torch
 import time
 import datetime
 import os
-
-
-def format_time(elapsed):
-    '''
-    Takes a time in seconds and returns a string hh:mm:ss
-    '''
-    # 四舍五入到最近的秒
-    elapsed_rounded = int(round((elapsed)))
-
-    # 格式化为 hh:mm:ss
-    return str(datetime.timedelta(seconds=elapsed_rounded))
+import util
 
 
 class BertForMultiLabelSequenceClassification(BertPreTrainedModel):
@@ -62,7 +52,7 @@ def main():
         output_hidden_states=False,  # 模型是否返回所有隐层状态.
     )
 
-    output_dir = "./model_save/"
+    output_dir = "./model_save/multi_label/"
     if not os.path.exists(output_dir): os.makedirs(output_dir)
     input_ids = torch.from_numpy(np.load("./preparation/processed_data/input_ids.npy")).type(torch.long)
     attention_masks = torch.from_numpy(np.load("./preparation/processed_data/attention_masks.npy")).type(torch.long)
@@ -112,7 +102,7 @@ def main():
 
             # 每经过40次迭代，就输出进度信息
             if step % 40 == 0 and not step == 0:
-                elapsed = format_time(time.time() - t0)
+                elapsed = util.format_time(time.time() - t0)
                 print('  Batch {:>5,}  of  {:>5,}.    Elapsed: {:}.'.format(step, len(train_dataloader), elapsed))
 
             # 准备输入数据，并将其拷贝到 gpu 中
@@ -148,7 +138,7 @@ def main():
         avg_train_loss = total_train_loss / len(train_dataloader)
 
         # 单次 epoch 的训练时长
-        training_time = format_time(time.time() - t0)
+        training_time = util.format_time(time.time() - t0)
 
         print("")
         print("  Average training loss: {0:.2f}".format(avg_train_loss))
@@ -156,7 +146,7 @@ def main():
 
     print("")
     print("Training complete!")
-    print("Total training took {:} (h:mm:ss)".format(format_time(time.time() - total_t0)))
+    print("Total training took {:} (h:mm:ss)".format(util.format_time(time.time() - total_t0)))
 
     print("Saving model to %s" % output_dir)
     model_to_save = model.module if hasattr(model, 'module') else model

@@ -7,6 +7,7 @@ import thulac
 from collections import defaultdict, Counter
 from sklearn import preprocessing
 import util
+import re
 
 
 class DataProcess(object):
@@ -189,12 +190,12 @@ class LabelDataProcess(DataProcess):
             token_type_ids.extend(i_token_ids)
         input_ids = np.array(input_ids, dtype=np.long)
         attention_masks = np.array(attention_masks, dtype=np.long)
-        labels = np.array(labels, dtype=np.float)
-        token_type_ids = np.array(token_type_ids, dtype=np.float)
+        labels = np.array(labels, dtype=np.long)
+        token_type_ids = np.array(token_type_ids, dtype=np.long)
+        np.save(self.output_dir + "token_type_ids.npy", token_type_ids)
         np.save(self.output_dir + "input_ids.npy", input_ids)
         np.save(self.output_dir + "attention_masks.npy", attention_masks)
         np.save(self.output_dir + "labels.npy", labels)
-        np.save(self.output_dir + "token_type_ids.npy", token_type_ids)
         return input_ids, attention_masks, labels, token_type_ids
 
     def instance_process(self, instance):
@@ -205,15 +206,22 @@ class LabelDataProcess(DataProcess):
         for spo in instance['spo_list']:
             if spo['object']['@value'] in instance['text'] and spo['subject'] in instance['text']:
                 schema = '_'.join([spo['subject_type'], spo['predicate'], spo['object_type']['@value']])
-                sent_tokens = self.bert_tokenizer.tokenize(instance['text'])
+                # 英文在中文句子中出现时的 tokenize 方式有问题
+                sent = self.flush_text(instance['text'])
+                obj_text = self.flush_text(spo['object']['@value'])
+                sub_text = self.flush_text(spo['subject'])
+                sent_tokens = self.bert_tokenizer.tokenize(sent)
                 sent_tokens = [self.bert_tokenizer.cls_token] + sent_tokens + [self.bert_tokenizer.sep_token]
                 label_list = [self.nor_label] * len(sent_tokens)
-                if len(spo['object']['@value']) > len(spo['subject']):  # 防止覆盖情况（sub: AB obj: ABC)
-                    self.tag_label_list(label_list, sent_tokens, spo['subject'], True)
-                    self.tag_label_list(label_list, sent_tokens, spo['object']['@value'], False)
-                else:
-                    self.tag_label_list(label_list, sent_tokens, spo['object']['@value'], False)
-                    self.tag_label_list(label_list, sent_tokens, spo['subject'], True)
+                try:
+                    if len(spo['object']['@value']) > len(spo['subject']):  # 防止覆盖情况（sub: AB obj: ABC)
+                        self.tag_label_list(label_list, sent_tokens, sub_text, True)
+                        self.tag_label_list(label_list, sent_tokens, obj_text, False)
+                    else:
+                        self.tag_label_list(label_list, sent_tokens, obj_text, False)
+                        self.tag_label_list(label_list, sent_tokens, sub_text, True)
+                except:
+                    continue
                 input_ids, attention_masks, token_type_ids, label_ids = self.convert_to_ids(label_list, sent_tokens,
                                                                                             schema)
                 input_ids_list.append(input_ids)
@@ -229,7 +237,14 @@ class LabelDataProcess(DataProcess):
         label_tokens = self.bert_tokenizer.tokenize(label_text)
         label_indexes = util.index_of_sentence(label_tokens, sent_tokens)
         if not label_indexes:
-            raise Exception("label didn't show in text")
+            label_tokens[0] = "##" + label_tokens[0]
+            label_indexes = util.index_of_sentence(label_tokens, sent_tokens)
+            if not label_indexes:
+                print(label_tokens)
+                print(sent_tokens)
+                print(label_text)
+                # return []
+                raise Exception("label didn't show in text")
         for idx in label_indexes:
             label_list[idx] = self.sub_be_label if sub_or_obj else self.obj_be_label
             label_list[idx + 1:idx + len(label_tokens)] = [self.sub_fl_label if sub_or_obj else self.obj_fl_label] * (
@@ -251,13 +266,25 @@ class LabelDataProcess(DataProcess):
         # convert to id
         input_ids = self.bert_tokenizer.convert_tokens_to_ids(sent_tokens)
         label_ids = [self.token_labels.index(l) for l in label_list]
+        if len(input_ids) != len(sent_tokens):
+            print(sent_tokens)
+            raise Exception("???????")
 
         # pad
         input_ids.extend([0] * (self.max_len - len(input_ids)))
-        attention_masks.extend([0] * (self.max_len - len(input_ids)))
-        token_type_ids.extend([0] * (self.max_len - len(input_ids)))
-        label_list.extend([pad_token_id] * (self.max_len - len(input_ids)))
+        attention_masks.extend([0] * (self.max_len - len(sent_tokens)))
+        token_type_ids.extend([0] * (self.max_len - len(sent_tokens)))
+        label_ids.extend([pad_token_id] * (self.max_len - len(sent_tokens)))
+
+        assert len(input_ids) == self.max_len
+        assert len(attention_masks) == self.max_len
+        assert len(token_type_ids) == self.max_len
+        assert len(label_ids) == self.max_len
         return input_ids, attention_masks, token_type_ids, label_ids
+
+    @staticmethod
+    def flush_text(text):
+        return re.sub("([a-zA-Z0-9]+\\s)*[a-zA-Z0-9]+", lambda x: " " + x.group() + " ", text)
 
 
 def create_dictionary(diction_path, json_path):
@@ -284,29 +311,12 @@ def create_dictionary(diction_path, json_path):
 
 
 def main():
-    data_processor = BeginEndDataProcess("../pretrained_model/bert_wwm/", "../raw_data/", "./processed_data/")
+    data_processor = LabelDataProcess("../pretrained_model/bert_wwm/", "../raw_data/", "./processed_data/token_label/")
+    # print(s)
     data_processor.process()
-    # subject_begin = "<s_b>"
-    # subject_end = "<s_e>"
-    # object_begin = "<o_b>"
-    # object_end = "<o_e>"
-    # special_tokens = {'additional_special_tokens': [subject_begin, subject_end, object_begin, object_end]}
-    # bert_tokenizer = BertTokenizer.from_pretrained("../pretrained_model/bert_wwm/")
-    # bert_tokenizer.add_special_tokens(special_tokens)
-    # sent = '<s_b>三尖瓣闭锁<s_e>@若患有感染性心内膜炎，细菌栓子亦可进入脑部。三尖瓣闭锁@定位症状时，尚需考虑脑部疾病的存在。'
-    # t = bert_tokenizer(sent, max_length=300, pad_to_max_length=True)
-    # # t = bert_tokenizer.cls_token
-    # print(t, len(t['input_ids']))
+    # s = re.sub("([a-zA-Z0-9]+\\s)*[a-zA-Z0-9]+", lambda x: " " + x.group() + " ", "抑制胃酸治疗:是消除侵袭因素的主要途径:①H2 ad asd受体拮抗剂")
+    # print(s)
 
 
 if __name__ == "__main__":
-    # main()
-    # create_dictionary("./dictionary/sub_obj.txt", "./dictionary/sub_obj_type.json")
-    # data_processor = MultiLabelDataProcess(pretrained_path="../pretrained_model/bert_wwm/",
-    #                                        raw_data_path="../raw_data/",
-    #                                        output_dir="./processed_data/")
-    # data_processor.process()
-    label = np.array([1, 1, 9])
-    one_hot = np.zeros(10, dtype=np.long)
-    one_hot[label.ravel()] = 1
-    print(one_hot)
+    main()
