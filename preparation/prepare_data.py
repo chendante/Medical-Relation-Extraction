@@ -176,7 +176,7 @@ class LabelDataProcess(DataProcess):
     def __init__(self, pretrained_path, raw_data_path, output_dir, max_len=512, is_test=True, test_data_path=None):
         super().__init__(pretrained_path, raw_data_path, output_dir, max_len=max_len, is_test=is_test,
                          test_data_path=test_data_path)
-        self.bert_tokenizer.add_special_tokens({'additional_special_tokens': self.schemas})
+        # self.bert_tokenizer.add_special_tokens({'additional_special_tokens': self.schemas})
 
     def process(self):
         input_ids = []
@@ -255,26 +255,23 @@ class LabelDataProcess(DataProcess):
     def convert_to_ids(self, label_list, sent_tokens, schema):
         token_type_ids = [0 for _ in sent_tokens]
 
-        # add question part
-        sent_tokens.extend([schema] * (len(sent_tokens) - 2))
-        sent_tokens = sent_tokens[:self.max_len - 1]
-        sent_tokens.append(self.bert_tokenizer.sep_token)
-        token_type_ids.extend([1 for _ in range(len(sent_tokens) - len(token_type_ids))])
-        attention_masks = [1] * len(sent_tokens)
-        label_list.extend([self.nor_label] * (len(sent_tokens) - len(label_list)))
-
         # convert to id
         input_ids = self.bert_tokenizer.convert_tokens_to_ids(sent_tokens)
         label_ids = [self.token_labels.index(l) for l in label_list]
-        if len(input_ids) != len(sent_tokens):
-            print(sent_tokens)
-            raise Exception("???????")
+
+        # add question part
+        input_ids.extend([self.schemas.index(schema) + 2] * (len(sent_tokens) - 2))
+        input_ids = input_ids[:self.max_len - 1]
+        input_ids.append(self.bert_tokenizer.sep_token_id)
+        token_type_ids.extend([1 for _ in range(len(input_ids) - len(token_type_ids))])
+        attention_masks = [1] * len(input_ids)
+        label_ids.extend([self.token_labels.index(self.nor_label)] * (len(input_ids) - len(label_ids)))
 
         # pad
         input_ids.extend([0] * (self.max_len - len(input_ids)))
-        attention_masks.extend([0] * (self.max_len - len(sent_tokens)))
-        token_type_ids.extend([0] * (self.max_len - len(sent_tokens)))
-        label_ids.extend([0] * (self.max_len - len(sent_tokens)))
+        attention_masks.extend([0] * (self.max_len - len(attention_masks)))
+        token_type_ids.extend([0] * (self.max_len - len(token_type_ids)))
+        label_ids.extend([0] * (self.max_len - len(label_ids)))
 
         assert len(input_ids) == self.max_len
         assert len(attention_masks) == self.max_len

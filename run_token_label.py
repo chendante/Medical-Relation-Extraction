@@ -9,23 +9,23 @@ import util
 if __name__ == '__main__':
     model = BertForTokenClassification.from_pretrained(
         "./pretrained_model/bert_wwm/",
-        num_labels=5,
+        num_labels=6,
         output_attentions=False,  # 模型是否返回 attentions weights.
         output_hidden_states=False,  # 模型是否返回所有隐层状态.
     )
-    model.cuda()
+    # model.cuda()
     output_dir = "./model_save/token_label/"
     data_path = "./preparation/processed_data/token_label/"
     if not os.path.exists(output_dir): os.makedirs(output_dir)
     input_ids = torch.from_numpy(np.load(data_path + "input_ids.npy")).type(torch.long)
     attention_masks = torch.from_numpy(np.load(data_path + "attention_masks.npy")).type(torch.long)
     labels = torch.from_numpy(np.load(data_path + "labels.npy")).type(torch.float)
-    token_type_ids = torch.from_numpy(np.load(data_path + "./"))
+    token_type_ids = torch.from_numpy(np.load(data_path + "token_type_ids.npy"))
     dataset = TensorDataset(input_ids, attention_masks, labels, token_type_ids)
 
     # 训练 epochs。 BERT 作者建议在 2 和 4 之间，设大了容易过拟合
     epochs = 4
-    batch_size = 32
+    batch_size = 2
 
     train_dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
     optimizer = AdamW(model.parameters(),
@@ -44,7 +44,7 @@ if __name__ == '__main__':
 
     # 将模型设置为训练模式。这里并不是调用训练接口的意思
     model.train()
-    device = torch.device('cuda')
+    device = torch.device('cpu')
 
     for epoch_i in range(0, epochs):
 
