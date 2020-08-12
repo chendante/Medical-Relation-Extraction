@@ -170,7 +170,8 @@ class LabelDataProcess(DataProcess):
     sub_fl_label = "I-SUB"
     obj_fl_label = "I-OBJ"
     nor_label = 'O'
-    token_labels = [nor_label, sub_be_label, obj_be_label, sub_fl_label, obj_fl_label]
+    pad_label = 'P'
+    token_labels = [pad_label, nor_label, sub_be_label, obj_be_label, sub_fl_label, obj_fl_label]
 
     def __init__(self, pretrained_path, raw_data_path, output_dir, max_len=512, is_test=True, test_data_path=None):
         super().__init__(pretrained_path, raw_data_path, output_dir, max_len=max_len, is_test=is_test,
@@ -312,10 +313,7 @@ def create_dictionary(diction_path, json_path):
 
 def main():
     data_processor = LabelDataProcess("../pretrained_model/bert_wwm/", "../raw_data/", "./processed_data/token_label/")
-    # print(s)
     data_processor.process()
-    # s = re.sub("([a-zA-Z0-9]+\\s)*[a-zA-Z0-9]+", lambda x: " " + x.group() + " ", "抑制胃酸治疗:是消除侵袭因素的主要途径:①H2 ad asd受体拮抗剂")
-    # print(s)
 
 
 if __name__ == "__main__":
