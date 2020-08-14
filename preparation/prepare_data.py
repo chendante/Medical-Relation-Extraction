@@ -246,8 +246,8 @@ class LabelDataProcess(DataProcess):
         return input_ids_list, attention_masks_list, labels_list, token_type_ids_list
 
     def test_data_process(self, r_label_data):
-        # for t_d, r_d in zip(self.test_data, r_label_data):
-        pass
+        for i, (t_d, r_d) in enumerate(zip(self.test_data, r_label_data)):
+
 
     def tag_label_list(self, label_list, sent_tokens, label_text, sub_or_obj):
         label_tokens = self.bert_tokenizer.tokenize(label_text)
