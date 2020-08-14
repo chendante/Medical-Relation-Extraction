@@ -8,6 +8,8 @@ import datetime
 import os
 import util
 
+trained_model_path = "./model_save/multi_label/"
+
 
 class BertForMultiLabelSequenceClassification(BertPreTrainedModel):
     """BERT model for classification.
@@ -52,8 +54,8 @@ def main():
         output_hidden_states=False,  # 模型是否返回所有隐层状态.
     )
 
-    output_dir = "./model_save/multi_label/"
-    if not os.path.exists(output_dir): os.makedirs(output_dir)
+    if not os.path.exists(trained_model_path):
+        os.makedirs(trained_model_path)
     input_ids = torch.from_numpy(np.load("./preparation/processed_data/input_ids.npy")).type(torch.long)
     attention_masks = torch.from_numpy(np.load("./preparation/processed_data/attention_masks.npy")).type(torch.long)
     labels = torch.from_numpy(np.load("./preparation/processed_data/labels.npy")).type(torch.float)
@@ -148,9 +150,22 @@ def main():
     print("Training complete!")
     print("Total training took {:} (h:mm:ss)".format(util.format_time(time.time() - total_t0)))
 
-    print("Saving model to %s" % output_dir)
+    print("Saving model to %s" % trained_model_path)
     model_to_save = model.module if hasattr(model, 'module') else model
-    model_to_save.save_pretrained(output_dir)
+    model_to_save.save_pretrained(trained_model_path)
+
+
+def predict():
+    model = BertForMultiLabelSequenceClassification.from_pretrained(
+        trained_model_path,
+        # num_labels=53,
+        output_attentions=False,  # 模型是否返回 attentions weights.
+        output_hidden_states=False,  # 模型是否返回所有隐层状态.
+    )
+    print(model.num_labels)
+    input_ids = torch.from_numpy(np.load("./preparation/processed_data/input_ids.npy")).type(torch.long)
+    attention_masks = torch.from_numpy(np.load("./preparation/processed_data/attention_masks.npy")).type(torch.long)
+
 
 if __name__ == '__main__':
     main()

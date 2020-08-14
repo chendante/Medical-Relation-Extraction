@@ -17,11 +17,12 @@ class DataProcess(object):
         self.output_dir = output_dir
         self.max_len = max_len
         self.schemas = self.schemas_init(raw_data_path)
-        self.train_data = self.train_data_init(raw_data_path, is_test)
+        if test_data_path is None:
+            self.train_data = self.train_data_init(raw_data_path, is_test)
+        else:
+            self.test_data = self.test_init(test_data_path)
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
-        if test_data_path is not None:
-            self.test_data = self.test_init(test_data_path)
 
     @staticmethod
     def schemas_init(raw_data_path):
@@ -163,6 +164,16 @@ class MultiLabelDataProcess(DataProcess):
 
         return input_ids, attention_masks, labels
 
+    def test_data_process(self):
+        sent_list = [t_d['text'] for t_d in self.test_data]
+        encode_dict = self.bert_tokenizer(sent_list, add_special_tokens=True, max_length=self.max_len,
+                                          padding='max_length')
+        input_ids = np.array(encode_dict['input_ids'], dtype=np.long)
+        attention_masks = np.array(encode_dict['attention_mask'], dtype=np.long)
+        np.save(self.output_dir + "test_input_ids.npy", input_ids)
+        np.save(self.output_dir + "test_attention_masks.npy", attention_masks)
+        return input_ids, attention_masks
+
 
 class LabelDataProcess(DataProcess):
     sub_be_label = "B-SUB"
@@ -233,6 +244,10 @@ class LabelDataProcess(DataProcess):
                 print(spo)
                 break
         return input_ids_list, attention_masks_list, labels_list, token_type_ids_list
+
+    def test_data_process(self, r_label_data):
+        # for t_d, r_d in zip(self.test_data, r_label_data):
+        pass
 
     def tag_label_list(self, label_list, sent_tokens, label_text, sub_or_obj):
         label_tokens = self.bert_tokenizer.tokenize(label_text)
@@ -309,7 +324,9 @@ def create_dictionary(diction_path, json_path):
 
 def main():
     data_processor = LabelDataProcess("../pretrained_model/bert_wwm/", "../raw_data/", "./processed_data/token_label/")
-    data_processor.process()
+    # data_processor.process()
+    s = data_processor.bert_tokenizer(["人人为我", "我为人人"], max_length=10, padding="max_length")
+    print(s)
 
 
 if __name__ == "__main__":
