@@ -234,8 +234,10 @@ class LabelDataProcess(DataProcess):
                         self.tag_label_list(label_list, sent_tokens, sub_text, True)
                 except:
                     continue
-                input_ids, attention_masks, token_type_ids, label_ids = self.convert_to_ids(label_list, sent_tokens,
-                                                                                            schema)
+                input_ids, attention_masks, token_type_ids, label_ids = self.convert_to_ids(label_list=label_list,
+                                                                                            sent_tokens=sent_tokens,
+                                                                                            schema_id=self.schemas.index(
+                                                                                                schema))
                 input_ids_list.append(input_ids)
                 attention_masks_list.append(attention_masks)
                 labels_list.append(label_ids)
@@ -246,9 +248,25 @@ class LabelDataProcess(DataProcess):
         return input_ids_list, attention_masks_list, labels_list, token_type_ids_list
 
     def test_data_process(self, r_label_data):
-        for i, (t_d, r_d) in enumerate(zip(self.test_data, r_label_data)):
-            pass
-
+        train_to_sent = dict()
+        train_index = 0
+        input_ids_list = []
+        attention_masks_list = []
+        token_type_ids_list = []
+        for i, (instance, r_d) in enumerate(zip(self.test_data, r_label_data)):
+            for r_label in r_d:
+                train_to_sent[train_index] = i
+                train_index += 1
+                # 英文在中文句子中出现时的 tokenize 方式有问题
+                sent = self.flush_text(instance['text'])
+                sent_tokens = self.bert_tokenizer.tokenize(sent)
+                sent_tokens = [self.bert_tokenizer.cls_token] + sent_tokens + [self.bert_tokenizer.sep_token]
+                input_ids, attention_masks, token_type_ids = self.convert_to_ids(sent_tokens=sent_tokens,
+                                                                                 schema_id=r_label)
+                input_ids_list.append(input_ids)
+                attention_masks_list.append(attention_masks)
+                token_type_ids_list.append(token_type_ids)
+        return input_ids_list, attention_masks_list, token_type_ids_list, train_to_sent
 
     def tag_label_list(self, label_list, sent_tokens, label_text, sub_or_obj):
         label_tokens = self.bert_tokenizer.tokenize(label_text)
@@ -268,32 +286,34 @@ class LabelDataProcess(DataProcess):
                     len(label_tokens) - 1)
         return label_list
 
-    def convert_to_ids(self, label_list, sent_tokens, schema):
+    def convert_to_ids(self, sent_tokens, schema_id, label_list=None):
         token_type_ids = [0 for _ in sent_tokens]
 
         # convert to id
         input_ids = self.bert_tokenizer.convert_tokens_to_ids(sent_tokens)
-        label_ids = [self.token_labels.index(l) for l in label_list]
 
         # add question part
-        input_ids.extend([self.schemas.index(schema) + 2] * (len(sent_tokens) - 2))
+        input_ids.extend([schema_id + 2] * (len(sent_tokens) - 2))
         input_ids = input_ids[:self.max_len - 1]
         input_ids.append(self.bert_tokenizer.sep_token_id)
         token_type_ids.extend([1 for _ in range(len(input_ids) - len(token_type_ids))])
         attention_masks = [1] * len(input_ids)
-        label_ids.extend([self.token_labels.index(self.nor_label)] * (len(input_ids) - len(label_ids)))
 
         # pad
         input_ids.extend([0] * (self.max_len - len(input_ids)))
         attention_masks.extend([0] * (self.max_len - len(attention_masks)))
         token_type_ids.extend([0] * (self.max_len - len(token_type_ids)))
-        label_ids.extend([0] * (self.max_len - len(label_ids)))
 
         assert len(input_ids) == self.max_len
         assert len(attention_masks) == self.max_len
         assert len(token_type_ids) == self.max_len
-        assert len(label_ids) == self.max_len
-        return input_ids, attention_masks, token_type_ids, label_ids
+        if label_list is not None:
+            label_ids = [self.token_labels.index(l) for l in label_list]
+            label_ids.extend([self.token_labels.index(self.nor_label)] * (len(input_ids) - len(label_ids)))
+            label_ids.extend([0] * (self.max_len - len(label_ids)))
+            assert len(label_ids) == self.max_len
+            return input_ids, attention_masks, token_type_ids, label_ids
+        return input_ids, attention_masks, token_type_ids
 
     @staticmethod
     def flush_text(text):
@@ -332,3 +352,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    print(LabelDataProcess.obj_be_label)
