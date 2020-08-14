@@ -7,8 +7,10 @@ import time
 import datetime
 import os
 import util
+from preparation import prepare_data
 
 trained_model_path = "./model_save/multi_label/"
+pretrained_model_path = "./pretrained_model/bert_wwm/"
 
 
 class BertForMultiLabelSequenceClassification(BertPreTrainedModel):
@@ -178,6 +180,9 @@ def main():
 
 
 def predict():
+    # Get test data
+    prepare_data.MultiLabelDataProcess(pretrained_path=pretrained_model_path, raw_data_path="./raw_data", output_dir="./", )
+
     model = BertForMultiLabelSequenceClassification.from_pretrained(
         trained_model_path,
         # num_labels=53,

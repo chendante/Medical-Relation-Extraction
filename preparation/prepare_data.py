@@ -170,8 +170,8 @@ class MultiLabelDataProcess(DataProcess):
                                           padding='max_length')
         input_ids = np.array(encode_dict['input_ids'], dtype=np.long)
         attention_masks = np.array(encode_dict['attention_mask'], dtype=np.long)
-        np.save(self.output_dir + "test_input_ids.npy", input_ids)
-        np.save(self.output_dir + "test_attention_masks.npy", attention_masks)
+        # np.save(self.output_dir + "test_input_ids.npy", input_ids)
+        # np.save(self.output_dir + "test_attention_masks.npy", attention_masks)
         return input_ids, attention_masks
 
 
