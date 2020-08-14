@@ -247,6 +247,7 @@ class LabelDataProcess(DataProcess):
 
     def test_data_process(self, r_label_data):
         for i, (t_d, r_d) in enumerate(zip(self.test_data, r_label_data)):
+            pass
 
 
     def tag_label_list(self, label_list, sent_tokens, label_text, sub_or_obj):
