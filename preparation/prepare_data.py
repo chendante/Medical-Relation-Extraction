@@ -259,7 +259,7 @@ class LabelDataProcess(DataProcess):
             pb = r_d.sigmoid()
             r_labels = [i for i, p in enumerate(pb) if p > threshold]
             for r_label in r_labels:
-                train_to_sent[train_index] = i
+                train_to_sent[train_index] = (i, r_label)
                 train_index += 1
                 # 英文在中文句子中出现时的 tokenize 方式有问题
                 sent = self.flush_text(instance['text'])
