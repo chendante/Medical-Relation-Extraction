@@ -8,6 +8,8 @@ from collections import defaultdict, Counter
 from sklearn import preprocessing
 import util
 import re
+import torch
+from typing import List
 
 
 class DataProcess(object):
@@ -247,14 +249,16 @@ class LabelDataProcess(DataProcess):
                 break
         return input_ids_list, attention_masks_list, labels_list, token_type_ids_list
 
-    def test_data_process(self, r_label_data):
+    def test_data_process(self, r_label_data: List[torch.Tensor], threshold):
         train_to_sent = dict()
         train_index = 0
         input_ids_list = []
         attention_masks_list = []
         token_type_ids_list = []
         for i, (instance, r_d) in enumerate(zip(self.test_data, r_label_data)):
-            for r_label in r_d:
+            pb = r_d.sigmoid()
+            r_labels = [i for i, p in enumerate(pb) if p > threshold]
+            for r_label in r_labels:
                 train_to_sent[train_index] = i
                 train_index += 1
                 # 英文在中文句子中出现时的 tokenize 方式有问题
