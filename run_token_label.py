@@ -9,7 +9,7 @@ import util
 if __name__ == '__main__':
     model = BertForTokenClassification.from_pretrained(
         "./pretrained_model/bert_wwm/",
-        num_labels=6,
+        num_labels=7,
         output_attentions=False,  # 模型是否返回 attentions weights.
         output_hidden_states=False,  # 模型是否返回所有隐层状态.
     )

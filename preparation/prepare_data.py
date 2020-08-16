@@ -250,7 +250,7 @@ class LabelDataProcess(DataProcess):
                 break
         return input_ids_list, attention_masks_list, labels_list, token_type_ids_list
 
-    def test_data_process(self, r_label_data: List[torch.Tensor], threshold):
+    def test_data_process(self, r_label_data: torch.Tensor, threshold):
         train_to_sent = dict()
         train_index = 0
         input_ids_list = []
