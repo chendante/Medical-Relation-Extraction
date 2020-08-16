@@ -4,7 +4,6 @@ from torch.utils.data import TensorDataset, DataLoader
 import numpy as np
 import torch
 import time
-import datetime
 import os
 import util
 from preparation import prepare_data
@@ -28,16 +27,16 @@ class BertForMultiLabelSequenceClassification(BertPreTrainedModel):
         self.init_weights()
 
     def forward(
-        self,
-        input_ids=None,
-        attention_mask=None,
-        token_type_ids=None,
-        position_ids=None,
-        head_mask=None,
-        inputs_embeds=None,
-        labels=None,
-        output_attentions=None,
-        output_hidden_states=None,
+            self,
+            input_ids=None,
+            attention_mask=None,
+            token_type_ids=None,
+            position_ids=None,
+            head_mask=None,
+            inputs_embeds=None,
+            labels=None,
+            output_attentions=None,
+            output_hidden_states=None,
     ):
         outputs = self.bert(
             input_ids,
@@ -181,14 +180,19 @@ def main():
 
 def predict():
     # Get test data
-    prepare_data.MultiLabelDataProcess(pretrained_path=pretrained_model_path, raw_data_path="./raw_data", output_dir="./", )
-
+    data_processor = prepare_data.MultiLabelDataProcess(pretrained_path=pretrained_model_path,
+                                                        raw_data_path="./raw_data/", output_dir="./",
+                                                        test_data_path="./raw_data/test1.json")
+    input_ids, attention_masks = data_processor.test_data_process()
+    input_ids = torch.from_numpy(input_ids).type(torch.long)
+    attention_masks = torch.from_numpy(attention_masks).type(torch.long)
     model = BertForMultiLabelSequenceClassification.from_pretrained(
         trained_model_path,
         # num_labels=53,
         output_attentions=False,  # 模型是否返回 attentions weights.
         output_hidden_states=False,  # 模型是否返回所有隐层状态.
     )
+
     print(model.num_labels)
     input_ids = torch.from_numpy(np.load("./preparation/processed_data/input_ids.npy")).type(torch.long)
     attention_masks = torch.from_numpy(np.load("./preparation/processed_data/attention_masks.npy")).type(torch.long)
