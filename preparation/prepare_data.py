@@ -184,7 +184,8 @@ class LabelDataProcess(DataProcess):
     obj_fl_label = "I-OBJ"
     nor_label = 'O'
     pad_label = 'P'
-    token_labels = [pad_label, nor_label, sub_be_label, obj_be_label, sub_fl_label, obj_fl_label]
+    r_label = 'R'
+    token_labels = [pad_label, nor_label, sub_be_label, obj_be_label, sub_fl_label, obj_fl_label, r_label]
 
     def __init__(self, pretrained_path, raw_data_path, output_dir, max_len=512, is_test=True, test_data_path=None):
         super().__init__(pretrained_path, raw_data_path, output_dir, max_len=max_len, is_test=is_test,
@@ -258,6 +259,8 @@ class LabelDataProcess(DataProcess):
         for i, (instance, r_d) in enumerate(zip(self.test_data, r_label_data)):
             pb = r_d.sigmoid()
             r_labels = [i for i, p in enumerate(pb) if p > threshold]
+            if len(r_labels) == 0:
+                r_labels = [pb.argmax()]
             for r_label in r_labels:
                 train_to_sent[train_index] = (i, r_label)
                 train_index += 1
@@ -314,8 +317,8 @@ class LabelDataProcess(DataProcess):
         assert len(token_type_ids) == self.max_len
         if label_list is not None:
             label_ids = [self.token_labels.index(l) for l in label_list]
-            label_ids.extend([self.token_labels.index(self.nor_label)] * (no_pad_len - len(label_ids)))
-            label_ids.extend([0] * (self.max_len - len(label_ids)))
+            label_ids.extend([self.token_labels.index(self.r_label)] * (no_pad_len - len(label_ids)))
+            label_ids.extend([self.token_labels.index(self.pad_label)] * (self.max_len - len(label_ids)))
             assert len(label_ids) == self.max_len
             return input_ids, attention_masks, token_type_ids, label_ids
         return input_ids, attention_masks, token_type_ids
