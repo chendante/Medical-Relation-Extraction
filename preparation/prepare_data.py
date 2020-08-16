@@ -300,8 +300,9 @@ class LabelDataProcess(DataProcess):
         input_ids.extend([schema_id + 2] * (len(sent_tokens) - 2))
         input_ids = input_ids[:self.max_len - 1]
         input_ids.append(self.bert_tokenizer.sep_token_id)
-        token_type_ids.extend([1 for _ in range(len(input_ids) - len(token_type_ids))])
-        attention_masks = [1] * len(input_ids)
+        no_pad_len = len(input_ids)
+        token_type_ids.extend([1 for _ in range(no_pad_len - len(token_type_ids))])
+        attention_masks = [1] * no_pad_len
 
         # pad
         input_ids.extend([0] * (self.max_len - len(input_ids)))
@@ -313,7 +314,7 @@ class LabelDataProcess(DataProcess):
         assert len(token_type_ids) == self.max_len
         if label_list is not None:
             label_ids = [self.token_labels.index(l) for l in label_list]
-            label_ids.extend([self.token_labels.index(self.nor_label)] * (len(input_ids) - len(label_ids)))
+            label_ids.extend([self.token_labels.index(self.nor_label)] * (no_pad_len - len(label_ids)))
             label_ids.extend([0] * (self.max_len - len(label_ids)))
             assert len(label_ids) == self.max_len
             return input_ids, attention_masks, token_type_ids, label_ids
@@ -349,9 +350,8 @@ def create_dictionary(diction_path, json_path):
 
 def main():
     data_processor = LabelDataProcess("../pretrained_model/bert_wwm/", "../raw_data/", "./processed_data/token_label/")
-    # data_processor.process()
-    s = data_processor.bert_tokenizer(["人人为我", "我为人人"], max_length=10, padding="max_length")
-    print(s)
+    data_processor.process()
+    # s = data_processor.bert_tokenizer(["人人为我", "我为人人"], max_length=10, padding="max_length")
 
 
 if __name__ == "__main__":
