@@ -346,7 +346,11 @@ def create_dictionary(diction_path, json_path):
         counter[k] = sum(v.values())
     with codecs.open(diction_path, 'w+', encoding='utf-8') as f:
         for k, v in counter.most_common():
-            f.write(k + "\t" + str(v) + "\n")
+            if " " in k:
+                if v > 10:
+                    f.write(k.replace(" ", "_") + " " + str(v) + "\n")
+            else:
+                f.write(k + " " + str(v) + "\n")
     with codecs.open(json_path, 'w+', encoding='utf-8') as f:
         json.dump(dictionary, f)
 
@@ -358,5 +362,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
-    print(LabelDataProcess.obj_be_label)
+    # main()
+    # print(LabelDataProcess.obj_be_label)
+    create_dictionary("./dictionary/sub_obj.txt", "./dictionary/sub_obj_type.json")
