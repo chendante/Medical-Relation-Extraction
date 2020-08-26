@@ -138,7 +138,7 @@ def main():
 
     with codecs.open("./result/result.json", mode='w+', encoding='utf-8') as f:
         for l in final_result:
-            f.write(json.dumps(l) + "\n")
+            f.write(json.dumps(l, ensure_ascii=False) + "\n")
 
 
 if __name__ == '__main__':

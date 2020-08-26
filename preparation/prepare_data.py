@@ -324,7 +324,12 @@ class LabelDataProcess(DataProcess):
         return input_ids, attention_masks, token_type_ids
 
     @staticmethod
-    def flush_text(text):
+    def flush_text(text: str) -> str:
+        """
+        在英文与中文中间添加空格
+        :param text:
+        :return:
+        """
         return re.sub("([a-zA-Z0-9]+\\s)*[a-zA-Z0-9]+", lambda x: " " + x.group() + " ", text)
 
 
@@ -352,7 +357,7 @@ def create_dictionary(diction_path, json_path):
             else:
                 f.write(k + " " + str(v) + "\n")
     with codecs.open(json_path, 'w+', encoding='utf-8') as f:
-        json.dump(dictionary, f)
+        json.dump(dictionary, f, ensure_ascii=False)
 
 
 def main():
