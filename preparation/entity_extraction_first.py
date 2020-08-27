@@ -12,9 +12,7 @@ from typing import List
 class DiseaseBasedDataProcess(prepare_data.DataProcess):
     subject_begin = "<s_b>"
     subject_end = "<s_e>"
-    object_begin = "<o_b>"
-    object_end = "<o_e>"
-    special_tokens = {'additional_special_tokens': [subject_begin, subject_end, object_begin, object_end]}
+    special_tokens = {'additional_special_tokens': [subject_begin, subject_end]}
     be_label = "B"
     fl_label = "I"
     nor_label = "O"
@@ -145,6 +143,59 @@ class DiseaseBasedDataProcess(prepare_data.DataProcess):
             if seg in self.disease_list:
                 res_list.append(seg)
         return res_list
+
+
+class RelationPredictDataProcess(prepare_data.DataProcess):
+    subject_begin = "<s_b>"
+    subject_end = "<s_e>"
+    object_begin = "<o_b>"
+    object_end = "<o_e>"
+    special_tokens = {'additional_special_tokens': [subject_begin, subject_end, object_begin, object_end]}
+
+    def __init__(self, pretrained_path, raw_data_path, output_dir, max_len=300, is_test=True, test_data_path=None):
+        super().__init__(pretrained_path, raw_data_path, output_dir, max_len=max_len, is_test=is_test,
+                         test_data_path=test_data_path)
+        self.bert_tokenizer.add_special_tokens(self.special_tokens)
+
+    @staticmethod
+    def schemas_init(raw_data_path):
+        schemas = []
+        with codecs.open(raw_data_path + "53_schemas.json", encoding='utf-8') as f:
+            while True:
+                line = f.readline()
+                if line == "":
+                    break
+                schema = json.loads(line)
+                if schema['subject_type'] == "疾病":
+                    schemas.append("_".join([schema['subject_type'], schema['predicate'], schema['object_type']]))
+        return schemas
+
+    def instance_process(self, instance):
+        # TODO
+        # if len(token_list) > self.bert_tokenizer.model_max_length: pass  # BERT有输入上限
+        input_ids = []
+        attention_masks = []
+        labels = []
+        for spo in instance['spo_list']:
+            if spo['subject_type'] == "疾病":
+                sent = instance['text'].replace(spo['object']['@value'],
+                                                self.object_begin + spo['object']['@value'] + self.object_end).replace(
+                    spo['subject'], self.subject_begin + spo['subject'] + self.subject_end)
+                encoded_dict = self.bert_tokenizer(sent, add_special_tokens=True, pad_to_max_length=True,
+                                                   max_length=self.max_len)
+                input_ids.append(encoded_dict['input_ids'])
+                attention_masks.append(encoded_dict['attention_mask'])
+                label = '_'.join([spo['subject_type'], spo['predicate'], spo['object_type']['@value']])
+                labels.append(self.schemas.index(label))
+        return input_ids, attention_masks, labels
+
+    def test_data_process(self, t_label_data: torch.Tensor, threshold: float, labeled_to_sent):
+        train_to_sent = dict()
+        train_index = 0
+        input_ids_list = []
+        attention_masks_list = []
+        for i, token_label in enumerate(t_label_data):
+            pass
 
 
 if __name__ == '__main__':
