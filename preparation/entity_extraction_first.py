@@ -214,6 +214,9 @@ class RelationPredictDataProcess(prepare_data.DataProcess):
             for obj_word in objs:
                 if obj_word not in sent:
                     obj_word = util.get_showed_word(sent, obj_word)
+                if obj_word is None:
+                    print("OBJ_WORD is NONE")
+                    continue
                 train_to_sent[train_index] = (sent_index, disease, obj_word)
                 train_index += 1
                 labeled_sent = sent.replace(obj_word, self.object_begin + obj_word + self.object_end).replace(
@@ -230,8 +233,7 @@ class RelationPredictDataProcess(prepare_data.DataProcess):
             label = token_labels[token_index].argmax(dim=-1)
             if label == 2:  # B
                 token_values = [sent_tokens[token_index]]
-                inner_index = token_index + 1
-                while inner_index < len(sent_tokens) - 2:
+                for inner_index in range(token_index + 1, len(sent_tokens) - 1):
                     inner_label = token_labels[inner_index].argmax(dim=-1)
                     if inner_label == 3:  # I
                         token_values.append(util.flush_token(sent_tokens[inner_index]))
