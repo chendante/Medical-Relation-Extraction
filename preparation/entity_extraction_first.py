@@ -6,7 +6,7 @@ import jieba
 from collections import defaultdict
 import util
 import torch
-from typing import List
+from typing import List, Set, Dict
 
 
 class DiseaseBasedDataProcess(prepare_data.DataProcess):
@@ -121,7 +121,8 @@ class DiseaseBasedDataProcess(prepare_data.DataProcess):
         # pad
         input_ids.extend([0] * (self.max_len - len(input_ids)))
         attention_masks.extend([0] * (self.max_len - len(attention_masks)))
-
+        if len(input_ids) > self.max_len:
+            print(sent_tokens)
         assert len(input_ids) == self.max_len
         assert len(attention_masks) == self.max_len
         if label_list is not None:
@@ -219,7 +220,7 @@ class RelationPredictDataProcess(prepare_data.DataProcess):
                                                    max_length=self.max_len)
                 input_ids_list.append(encoded_dict['input_ids'])
                 attention_masks_list.append(encoded_dict['attention_mask'])
-        return input_ids_list, attention_masks_list, train_to_sent
+        return input_ids_list, attention_masks_list, train_to_sent  # Dict[str: Set[int, str, str]]
 
     def get_objs(self, sent_tokens: List[str], token_labels: torch.Tensor):
         objs = []
