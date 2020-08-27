@@ -181,7 +181,7 @@ class RelationPredictDataProcess(prepare_data.DataProcess):
                 sent = instance['text'].replace(spo['object']['@value'],
                                                 self.object_begin + spo['object']['@value'] + self.object_end).replace(
                     spo['subject'], self.subject_begin + spo['subject'] + self.subject_end)
-                encoded_dict = self.bert_tokenizer(sent, add_special_tokens=True, pad_to_max_length=True,
+                encoded_dict = self.bert_tokenizer(sent, add_special_tokens=True, padding='max_length',
                                                    max_length=self.max_len)
                 input_ids.append(encoded_dict['input_ids'])
                 attention_masks.append(encoded_dict['attention_mask'])
