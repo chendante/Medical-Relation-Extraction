@@ -7,6 +7,7 @@ from collections import defaultdict
 import util
 import torch
 from typing import List, Set, Dict
+from tqdm import tqdm
 
 
 class DiseaseBasedDataProcess(prepare_data.DataProcess):
@@ -99,7 +100,7 @@ class DiseaseBasedDataProcess(prepare_data.DataProcess):
         train_index = 0
         input_ids_list = []
         attention_masks_list = []
-        for i, instance in enumerate(self.test_data):
+        for i, instance in tqdm(enumerate(self.test_data)):
             sent = instance['text']
             diseases = self.get_disease(sent)
             for disease in diseases:
@@ -201,7 +202,7 @@ class RelationPredictDataProcess(prepare_data.DataProcess):
         train_index = 0
         input_ids_list = []
         attention_masks_list = []
-        for i, token_label_data in enumerate(t_label_datas):
+        for i, token_label_data in tqdm(enumerate(t_label_datas)):
             sent_index, disease = labeled_to_sent[i]
             token_labels = token_label_data.softmax(-1)
             sent = self.test_data[sent_index]['text']
