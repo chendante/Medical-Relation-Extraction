@@ -102,7 +102,7 @@ class DiseaseBasedDataProcess(prepare_data.DataProcess):
             sent = instance['text']
             diseases = self.get_disease(sent)
             for disease in diseases:
-                train_to_sent[train_index] = i
+                train_to_sent[train_index] = (i, disease)
                 train_index += 1
                 disease_sent = sent.replace(disease, self.subject_begin + disease + self.subject_end)
                 disease_sent = util.flush_text(disease_sent)
@@ -151,8 +151,13 @@ class RelationPredictDataProcess(prepare_data.DataProcess):
     object_begin = "<o_b>"
     object_end = "<o_e>"
     special_tokens = {'additional_special_tokens': [subject_begin, subject_end, object_begin, object_end]}
+    be_label = "B"
+    fl_label = "I"
+    nor_label = "O"
+    pad_label = 'P'
+    token_labels = [pad_label, nor_label, be_label, fl_label]
 
-    def __init__(self, pretrained_path, raw_data_path, output_dir, max_len=300, is_test=True, test_data_path=None):
+    def __init__(self, pretrained_path, raw_data_path, output_dir, max_len=512, is_test=True, test_data_path=None):
         super().__init__(pretrained_path, raw_data_path, output_dir, max_len=max_len, is_test=is_test,
                          test_data_path=test_data_path)
         self.bert_tokenizer.add_special_tokens(self.special_tokens)
@@ -189,13 +194,54 @@ class RelationPredictDataProcess(prepare_data.DataProcess):
                 labels.append(self.schemas.index(label))
         return input_ids, attention_masks, labels
 
-    def test_data_process(self, t_label_data: torch.Tensor, threshold: float, labeled_to_sent):
+    def test_data_process(self, t_label_datas: torch.Tensor, labeled_to_sent):
         train_to_sent = dict()
         train_index = 0
         input_ids_list = []
         attention_masks_list = []
-        for i, token_label in enumerate(t_label_data):
-            pass
+        for i, token_label_data in enumerate(t_label_datas):
+            sent_index, disease = labeled_to_sent[i]
+            token_labels = token_label_data.softmax(-1)
+            sent = self.test_data[sent_index]['text']
+            disease_sent = sent.replace(disease, self.subject_begin + disease + self.subject_end)
+            disease_sent = util.flush_text(disease_sent)
+            sent_tokens = self.bert_tokenizer.tokenize(disease_sent)
+            sent_tokens = [self.bert_tokenizer.cls_token] + sent_tokens + [self.bert_tokenizer.sep_token]
+            objs = self.get_objs(sent_tokens, token_labels)
+            for obj_word in objs:
+                if obj_word not in sent:
+                    obj_word = util.get_showed_word(sent, obj_word)
+                train_to_sent[train_index] = (sent_index, disease, obj_word)
+                train_index += 1
+                labeled_sent = sent.replace(obj_word, self.object_begin + obj_word + self.object_end).replace(
+                    disease, self.subject_begin + disease + self.subject_end)
+                encoded_dict = self.bert_tokenizer(labeled_sent, add_special_tokens=True, padding='max_length',
+                                                   max_length=self.max_len)
+                input_ids_list.append(encoded_dict['input_ids'])
+                attention_masks_list.append(encoded_dict['attention_mask'])
+        return input_ids_list, attention_masks_list, train_to_sent
+
+    def get_objs(self, sent_tokens: List[str], token_labels: torch.Tensor):
+        objs = []
+        for token_index in range(1, len(sent_tokens) - 1):
+            label = token_labels[token_index].argmax(dim=-1)
+            if label == 2:  # B
+                token_values = [sent_tokens[token_index]]
+                inner_index = token_index + 1
+                while inner_index < len(sent_tokens) - 2:
+                    inner_label = token_labels[inner_index].argmax(dim=-1)
+                    if inner_label == 3:  # I
+                        token_values.append(util.flush_token(sent_tokens[inner_index]))
+                    else:
+                        for t in token_values:
+                            if t in self.special_tokens['additional_special_tokens']:
+                                token_values = []
+                                print("Error: token_labels")
+                                break
+                        if len(token_values) >= 2:
+                            objs.append("".join(token_values))
+                        break
+        return objs
 
 
 if __name__ == '__main__':
