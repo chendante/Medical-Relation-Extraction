@@ -6,6 +6,8 @@ import torch
 import util
 import preparation.entity_extraction_first as pr
 from run_multi_label import BertForMultiLabelSequenceClassification
+import codecs
+import json
 
 test_data_path = "./raw_data/test1.json"
 
@@ -78,6 +80,25 @@ if __name__ == '__main__':
 
     print("     DONE.")
 
+    final_result = [{"text": t_d["text"], "spo_list": []} for t_d in data_processor.test_data]
     for i, cls_prediction in enumerate(cls_predictions):
         sent_index, disease, obj_word = train_to_sent[i]
+        schema_type_index = cls_prediction.softmax(-1).argmax(dim=-1)
+        s_type, predicate, o_type = data_processor.schemas[schema_type_index].split("_")
+        combined = False
+        sent = final_result[sent_index]["text"]
+        s_num = sent.count("。") + sent.count("？")
+        if sent[-1] != '。' and sent[-1] != '？':
+            s_num += 1
+        if s_num > 1:
+            combined = True
+        final_result[sent_index]["spo_list"].append({
+            "Combined": combined, "predicate": predicate, "subject": disease, "subject_type": s_type,
+            "object": {"@value": obj_word},
+            "object_type": {"@value": o_type}
+        })
+
+    with codecs.open("./result/result_diseased.json", mode='w+', encoding='utf-8') as f:
+        for l in final_result:
+            f.write(json.dumps(l, ensure_ascii=False) + "\n")
 

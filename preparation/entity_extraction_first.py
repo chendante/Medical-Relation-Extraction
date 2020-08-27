@@ -243,7 +243,7 @@ class RelationPredictDataProcess(prepare_data.DataProcess):
                         if len(token_values) >= 2:
                             objs.append("".join(token_values))
                         break
-        return objs
+        return list(set(objs))
 
 
 if __name__ == '__main__':
