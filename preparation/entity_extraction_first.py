@@ -34,7 +34,7 @@ class DiseaseBasedDataProcess(prepare_data.DataProcess):
             with codecs.open(voc_type_path, encoding='utf-8') as f:
                 self.voc_type = json.load(f, encoding='utf-8')
             for v, types in self.voc_type.items():
-                if "疾病" in types:
+                if "疾病" in types and len(v) >= 1:
                     self.disease_list.add(v)
 
     @staticmethod
@@ -54,7 +54,8 @@ class DiseaseBasedDataProcess(prepare_data.DataProcess):
         input_ids_list = []
         attention_masks_list = []
         labels_list = []
-        sent = util.flush_text(instance['text'])
+        sent = instance['text']
+        # sent = util.flush_text(instance['text'])
         disease_dict = defaultdict(list)
         for spo in instance['spo_list']:
             if spo['subject_type'] == "疾病":
@@ -105,7 +106,7 @@ class DiseaseBasedDataProcess(prepare_data.DataProcess):
                 train_to_sent[train_index] = (i, disease)
                 train_index += 1
                 disease_sent = sent.replace(disease, self.subject_begin + disease + self.subject_end)
-                disease_sent = util.flush_text(disease_sent)
+                # disease_sent = util.flush_text(disease_sent)
                 sent_tokens = self.bert_tokenizer.tokenize(disease_sent)
                 sent_tokens = [self.bert_tokenizer.cls_token] + sent_tokens + [self.bert_tokenizer.sep_token]
                 input_ids, attention_masks = self.convert_to_ids(sent_tokens=sent_tokens)
@@ -143,7 +144,7 @@ class DiseaseBasedDataProcess(prepare_data.DataProcess):
         for seg in seg_list:
             if seg in self.disease_list:
                 res_list.append(seg)
-        return res_list
+        return list(set(res_list))
 
 
 class RelationPredictDataProcess(prepare_data.DataProcess):
@@ -205,7 +206,7 @@ class RelationPredictDataProcess(prepare_data.DataProcess):
             token_labels = token_label_data.softmax(-1)
             sent = self.test_data[sent_index]['text']
             disease_sent = sent.replace(disease, self.subject_begin + disease + self.subject_end)
-            disease_sent = util.flush_text(disease_sent)
+            # disease_sent = util.flush_text(disease_sent)
             sent_tokens = self.bert_tokenizer.tokenize(disease_sent)
             sent_tokens = [self.bert_tokenizer.cls_token] + sent_tokens + [self.bert_tokenizer.sep_token]
             objs = self.get_objs(sent_tokens, token_labels)
